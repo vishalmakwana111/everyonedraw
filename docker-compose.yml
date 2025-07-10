@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: everyonedraw_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: everyonedraw_dev
+      POSTGRES_USER: everyonedraw_user
+      POSTGRES_PASSWORD: everyonedraw_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # - ./database/init:/docker-entrypoint-initdb.d # We can enable this later if we need initialization scripts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U everyonedraw_user -d everyonedraw_dev"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - everyonedraw-network
+
+networks:
+  everyonedraw-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local 
