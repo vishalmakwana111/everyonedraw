@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-interface Pixel {
+export interface Pixel {
   x: number;
   y: number;
   color: string;
@@ -24,6 +24,7 @@ interface CanvasState {
   setSelectedColor: (color: string) => void;
   setPixel: (x: number, y: number, color: string) => void;
   removePixel: (x: number, y: number) => void;
+  addPixels: (pixels: Pixel[]) => void;
 }
 
 export const useCanvasStore = create<CanvasState>((set) => ({
@@ -42,4 +43,9 @@ export const useCanvasStore = create<CanvasState>((set) => ({
   removePixel: (x, y) => set((state) => ({
     pixels: state.pixels.filter(p => p.x !== x || p.y !== y),
   })),
+  addPixels: (newPixels) => set((state) => {
+    const existingPixelKeys = new Set(state.pixels.map(p => `${p.x},${p.y}`));
+    const uniqueNewPixels = newPixels.filter(p => !existingPixelKeys.has(`${p.x},${p.y}`));
+    return { pixels: [...state.pixels, ...uniqueNewPixels] };
+  }),
 })); 

@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { useCanvasStore } from '@/stores/canvasStore';
+import { useSocket } from '@/providers/SocketProvider';
 
 const ZOOM_SENSITIVITY = 0.001;
 const GRID_CELL_SIZE = 32; // The size of one pixel cell in our world
@@ -10,14 +11,71 @@ const GRID_ZOOM_THRESHOLD = 5;
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 30;
 
-const Canvas = () => {
+interface CanvasProps {
+  initialOffset: { x: number; y: number };
+  initialZoom: number;
+}
+
+const Canvas = ({ initialOffset, initialZoom }: CanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [loadedChunks, setLoadedChunks] = useState<Set<string>>(new Set());
   const { 
     offset, setOffset, 
     zoom, setZoom, 
     pixels, setPixel, removePixel,
     selectedColor 
   } = useCanvasStore();
+  const { emitPixelChange, emitPixelRemove, emitRequestPixels } = useSocket();
+
+  // Update URL on pan/zoom
+  useEffect(() => {
+    const debounce = setTimeout(() => {
+      // Round the values to keep the URL clean
+      const x = Math.round(offset.x);
+      const y = Math.round(offset.y);
+      const z = parseFloat(zoom.toFixed(2));
+      window.history.replaceState(null, '', `/${x}/${y}/${z}`);
+    }, 100); // Debounce to avoid excessive updates
+
+    return () => clearTimeout(debounce);
+  }, [offset, zoom]);
+
+  // Request pixels when viewport changes
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleViewportChange = () => {
+      const viewLeft = -offset.x / zoom;
+      const viewTop = -offset.y / zoom;
+      const viewRight = (canvas.width - offset.x) / zoom;
+      const viewBottom = (canvas.height - offset.y) / zoom;
+
+      const xMin = Math.floor(viewLeft / GRID_CELL_SIZE);
+      const yMin = Math.floor(viewTop / GRID_CELL_SIZE);
+      const xMax = Math.ceil(viewRight / GRID_CELL_SIZE);
+      const yMax = Math.ceil(viewBottom / GRID_CELL_SIZE);
+
+      const chunkX = Math.floor(xMin / 16); // Chunk size of 16x16 grid cells
+      const chunkY = Math.floor(yMin / 16);
+      const chunkKey = `${chunkX},${chunkY}`;
+
+      if (!loadedChunks.has(chunkKey)) {
+        emitRequestPixels({ xMin, yMin, xMax, yMax });
+        setLoadedChunks(prev => new Set(prev).add(chunkKey));
+      }
+    };
+
+    const debounce = setTimeout(handleViewportChange, 200);
+    return () => clearTimeout(debounce);
+  }, [offset, zoom, emitRequestPixels, loadedChunks]);
+
+  // Set initial state only once
+  useEffect(() => {
+    setOffset(initialOffset);
+    setZoom(initialZoom);
+  }, []); // Empty dependency array ensures this runs only once on mount
+
   const [isPanning, setIsPanning] = useState(false);
   const [hasDragged, setHasDragged] = useState(false);
   const [lastPanPosition, setLastPanPosition] = useState({ x: 0, y: 0 });
@@ -132,9 +190,11 @@ const Canvas = () => {
       const gridY = Math.floor(worldY / GRID_CELL_SIZE);
       
       if (selectedColor === 'ERASER') {
-        removePixel(gridX, gridY);
+        removePixel(gridX, gridY); // Update local state
+        emitPixelRemove(gridX, gridY); // Notify server
       } else {
-        setPixel(gridX, gridY, selectedColor);
+        setPixel(gridX, gridY, selectedColor); // Update local state
+        emitPixelChange(gridX, gridY, selectedColor); // Notify server
       }
     }
     
