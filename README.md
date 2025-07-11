@@ -14,7 +14,17 @@ Run the PostgreSQL database in a Docker container. From the project root:
 docker-compose up -d
 ```
 
-### 2. Start the Backend Server
+### 2. Run Database Migrations
+
+Once the database is running, apply the database schema migrations.
+
+```bash
+cd backend
+npx prisma migrate dev
+cd .. 
+```
+
+### 3. Start the Backend Server
 
 In a new terminal, navigate to the `backend` directory, install dependencies, and start the server.
 
@@ -25,7 +35,7 @@ npm run dev
 ```
 The backend will be running at `http://localhost:3001`.
 
-### 3. Start the Frontend Application
+### 4. Start the Frontend Application
 
 In a separate terminal, navigate to the `frontend` directory, install dependencies, and start the application.
 
