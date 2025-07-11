@@ -6,11 +6,6 @@ A collaborative, infinite pixel canvas application.
 
 Follow these instructions to get the development environment running.
 
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) (v18 or later)
-- [Docker](https://www.docker.com/products/docker-desktop/) and Docker Compose
-
 ### 1. Start the Database
 
 Run the PostgreSQL database in a Docker container. From the project root:
