@@ -14,7 +14,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # - ./database/init:/docker-entrypoint-initdb.d # We can enable this later if we need initialization scripts
+      # -./database/init:/docker-entrypoint-initdb.d # We can enable this later if we need initialization scripts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U everyonedraw_user -d everyonedraw_dev"]
       interval: 30s
